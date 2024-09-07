@@ -1,46 +1,97 @@
-#include "../include/main.h"
+#include "../headers/header.h"
+
+bool GameRunning = false;
+int TicksLastFrame;
+player_t player;
 
 /**
- * main - Entry point
+ * setup_game - initialize player variables and load wall textures
  *
- * Return: 0 (Success)
- */
+*/
+
+void setup_game(void)
+{
+
+	player.x = SCREEN_WIDTH / 2;
+	player.y = SCREEN_HEIGHT / 2;
+	player.width = 1;
+	player.height = 30;
+	player.walkDirection = 0;
+	player.walkSpeed = 100;
+	player.turnDirection = 0;
+	player.turnSpeed = 45 * (PI / 180);
+	player.rotationAngle = PI / 2;
+	WallTexturesready();
+}
+
+
+/**
+ * update_game - update_game delta time, the ticks last frame
+ *          the player movement and the ray casting
+ *
+*/
+void update_game(void)
+{
+	float DeltaTime;
+	int timeToWait = FRAME_TIME_LENGTH - (SDL_GetTicks() - TicksLastFrame);
+
+	if (timeToWait > 0 && timeToWait <= FRAME_TIME_LENGTH)
+	{
+		SDL_Delay(timeToWait);
+	}
+	DeltaTime = (SDL_GetTicks() - TicksLastFrame) / 1000.0f;
+
+	TicksLastFrame = SDL_GetTicks();
+
+	movePlayer(DeltaTime);
+	castAllRays();
+}
+
+/**
+ * render - calls all functions needed for on-screen rendering
+ *
+*/
+
+void render_game(void)
+{
+	clearColorBuffer(0xFF000000);
+
+	renderWall();
+
+	renderMap();
+	renderRays();
+	renderPlayer();
+
+	renderColorBuffer();
+}
+
+/**
+ * Destroy - free wall textures and destroy window
+ *
+*/
+void destroy_game(void)
+{
+	freeWallTextures();
+	destroyWindow();
+}
+
+/**
+ * main - main function
+ * Return: 0
+*/
+
 int main(void)
 {
-	SDL_Instance instance;
-	SDL_Event event = {0};
-	const unsigned char keys[KEYS];
-	Vector player;
-	double time = 0; /* time of current frame */
-	double oldTime = 0; /* time of previous frame */
-	_Bool quit = false; /* the quit flag */
+	GameRunning = initializeWindow();
 
-	player.dirX = -1;
-	player.dirY = 0;
-	player.posX = 22;
-	player.posY = 12;
-	player.planeX = 0;
-	player.planeY = 0.66;
+	setup_game();
 
-	/* Start up SDL and create window */
-	if (!initialize_SDL(&instance))
+	while (GameRunning)
 	{
-		fprintf(stderr, "Failed to initialize!\n");
-	} else
-	{
-		while (!quit)
-		{
-			SDL_SetRenderDrawColor(instance.renderer, 0x0, 0x0, 0x0, 0x0);
-			SDL_RenderClear(instance.renderer);
-			if (poll_events() == 1)
-				break;
-			raycaster(player, &time, &oldTime, &instance, &event, true,
-					keys);
-			SDL_RenderPresent(instance.renderer);
-			/* Hack to get window to stay up */
-			keep_window(&quit);
-		}
-		end(&instance);
+		handleInput();
+		update_game();
+		render_game();
 	}
+	destroy_game();
 	return (0);
 }
